@@ -3,68 +3,71 @@
 все методы должны быть реализованы на промисах, либо использовать станадртные методы с промисами
    2. кроме сохранения в бд записать в файл информацию о монетах и балансах */ 
 
-   const axios = require('axios');
-   const Web3 = require('web3');
-   const erc20Abi = require('erc-20-abi');
-   const fs  = require('fs');
-   const util = require('util');
-   const readFile = util.promisify(fs.readFile);
-   
-   const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/v3/64a2626b0570450fb688d9f7c0866316'));
-   const walletAddress = '0xA145ac099E3d2e9781C9c848249E2e6b256b030D';
-   const API = 'https://api.coingecko.com/api/v3/coins/list?include_platform=true';
-   
-   async function getCoinsList() {
-       const { data } = await axios.get(API);
-       const erc20Coins = data.filter((coin) => coin.platforms && coin.platforms.ethereum);
-   
-       try {
-           fs.promises.writeFile("./erc20Coins", JSON.stringify(erc20Coins));
-           console.log("Successfully wrote to file");
-       } catch (e) {
-           console.log("Unable to write to file ", e);
-       }
-       return readFile('./erc20Coins', 'utf8');
-   };
-   
-   getCoinsList();
-   
-   async function getTokenBalance() {
-       //const coin = await getCoinsList();
-   
-       const erc20CreationFilter = {        //список всех ERC20 токенов (используя метод getLogs)
-           fromBlock: '0x6D517',
-           toBlock: '0x126D2C',
-           address: null,
-           topics: [web3.utils.sha3('Transfer(address,address,uint256)')]
-       };
-   
-       const logs = await web3.eth.getPastLogs(erc20CreationFilter);
-       console.log({logs});
-   
-       const erc20Tokens = [];     // экземпляр контракта ERC20 для каждого токена в списке
-   
-       logs.forEach(log => {
-           const tokenAddress = log.address.toLowerCase();
-           if (!erc20Tokens.some(token => token.options.address === tokenAddress)) {
-               const tokenContract = new web3.eth.Contract(erc20Abi, tokenAddress);
-               erc20Tokens.push(tokenContract);
-           }
-       });
-   
-       const tokenBalances = [];     // для каждого токена в списке баланс в кошельке
-   
-       for (const token of erc20Tokens) {
-           const balance = await token.methods.balanceOf(walletAddress).call();
-           if (balance > 0) {
-               const tokenAddress = token.options.address;
-               const name = await token.methods.name().call();
-               tokenBalances.push({
-                   tokenAddress,
-                   name,
-                   balance
-               });
-           }
-       }
-   };
-   //getTokenBalance();
+const axios = require('axios');
+const Web3 = require('web3');
+const erc20Abi = require('erc-20-abi');
+const fs = require('fs');
+const util = require('util');
+const readFile = util.promisify(fs.readFile);
+
+const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/v3/64a2626b0570450fb688d9f7c0866316'));
+const walletAddress = '0xA145ac099E3d2e9781C9c848249E2e6b256b030D';
+const API = 'https://api.coingecko.com/api/v3/coins/list?include_platform=true';
+
+async function getCoinsList() {
+    const { data } = await axios.get(API);
+    const erc20Coins = data.filter((coin) => coin.platforms && coin.platforms.ethereum);
+    return erc20Coins;
+};
+
+async function saveCoinsToFile(coins) {
+    try {
+        await fs.promises.writeFile("./erc20Coins", JSON.stringify(coins));
+        console.log("Successfully wrote to file");
+    } catch (e) {
+        console.log("Unable to write to file ", e);
+    }
+};
+
+async function updateCoinsList() {
+    try {
+        const coins = await getCoinsList();
+        await saveCoinsToFile(coins);
+        const filePath = './erc20Coins';
+        if (fs.existsSync(filePath)) {
+            const updatedCoinsList = await readFile(filePath, 'utf8');
+            return updatedCoinsList;
+        } else {
+            console.log("File does not exist");
+            return null;
+        }
+    } catch (e) {
+        console.error('Error during coins list update:', e);
+        return null;
+    }
+};
+
+async function getTokenBalance(walletAddress) {
+    coinList = await updateCoinsList();
+    const tokenBalances = [];
+
+    for (const coin of coinList) {
+        const platforms = coin.platforms;
+        if (platforms && typeof platforms === 'object' && platforms.ethereum) {
+            const tokenContract = new web3.eth.Contract(erc20Abi, platforms.ethereum);
+            const balance = await tokenContract.methods.balanceOf(walletAddress).call();
+            
+            if (balance > 0) {
+                tokenBalances.push({
+                    tokenAddress: platforms.ethereum,
+                    name: coin.name,
+                    balance: balance
+                });
+            }
+        }
+    }
+    console.log({ tokenBalances });
+    return tokenBalances;
+}
+
+getTokenBalance(walletAddress);
