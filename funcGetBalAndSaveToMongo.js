@@ -10,64 +10,84 @@ const fs = require('fs');
 const util = require('util');
 const readFile = util.promisify(fs.readFile);
 
-const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/v3/64a2626b0570450fb688d9f7c0866316'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://goerli.infura.io/v3/64a2626b0570450fb688d9f7c0866316'));
 const walletAddress = '0xA145ac099E3d2e9781C9c848249E2e6b256b030D';
 const API = 'https://api.coingecko.com/api/v3/coins/list?include_platform=true';
 
-async function getCoinsList() {
-    const { data } = await axios.get(API);
-    const erc20Coins = data.filter((coin) => coin.platforms && coin.platforms.ethereum);
-    return erc20Coins;
+function getCoinsListFromApi() {
+    return axios.get(API)
+        .then(response => {
+            const erc20Coins = response.data.filter((coin) => coin.platforms && coin.platforms.ethereum);
+            return erc20Coins;
+        });
 };
 
-async function saveCoinsToFile(coins) {
-    try {
-        await fs.promises.writeFile("./erc20Coins", JSON.stringify(coins));
-        console.log("Successfully wrote to file");
-    } catch (e) {
-        console.log("Unable to write to file ", e);
-    }
+function saveCoinsToFile(coins) {
+    fs.promises.writeFile("./erc20Coins", JSON.stringify(coins))
+        .then(() => {
+            console.log("Successfully wrote to file");
+        })
+        .catch((e) => {
+            console.log("Unable to write to file ", e);
+        });
 };
 
-async function updateCoinsList() {
-    try {
-        const coins = await getCoinsList();
-        await saveCoinsToFile(coins);
-        const filePath = './erc20Coins';
-        if (fs.existsSync(filePath)) {
-            const updatedCoinsList = await readFile(filePath, 'utf8');
-            return updatedCoinsList;
-        } else {
-            console.log("File does not exist");
-            return null;
-        }
-    } catch (e) {
-        console.error('Error during coins list update:', e);
+function getCoinsList() {
+  const filePath = "./erc20Coins";
+  if (fs.existsSync(filePath)) {
+    return fs.promises
+      .readFile(filePath, "utf8")
+      .then((updatedCoinsList) => {
+        return updatedCoinsList;
+      })
+      .catch((e) => {
+        console.error("Error during coins list read:", e);
         return null;
-    }
+      });
+  } else {
+    return getCoinsListFromApi()
+      .then((coins) => {
+        return saveCoinsToFile(coins);
+      })
+      .catch((e) => {
+        console.error("Error during coins list update:", e);
+        return null;
+      });
+  }
 };
 
-async function getTokenBalance(walletAddress) {
-    coinList = await updateCoinsList();
-    const tokenBalances = [];
+function getTokenBalance(walletAddress) {
+    return getCoinsList()
+        .then((coinList) => {
+            coinList = JSON.parse(coinList);
+            const tokenBalances = [];
 
-    for (const coin of coinList) {
-        const platforms = coin.platforms;
-        if (platforms && typeof platforms === 'object' && platforms.ethereum) {
-            const tokenContract = new web3.eth.Contract(erc20Abi, platforms.ethereum);
-            const balance = await tokenContract.methods.balanceOf(walletAddress).call();
-            
-            if (balance > 0) {
-                tokenBalances.push({
-                    tokenAddress: platforms.ethereum,
-                    name: coin.name,
-                    balance: balance
-                });
+            for (const coin of coinList) {
+                const platforms = coin.platforms;
+                if (platforms && typeof platforms === "object" && platforms.ethereum) {
+                    const tokenContract = new web3.eth.Contract(
+                        erc20Abi,
+                        platforms.ethereum
+                    );
+                    return tokenContract.methods.balanceOf(walletAddress).call()
+                        .then((balance) => {
+                            console.log({ balance });
+                            if (balance > 0) {
+                                tokenBalances.push({
+                                    tokenAddress: platforms.ethereum,
+                                    name: coin.name,
+                                    balance: balance,
+                                });
+                            }
+                        });
+                }
             }
-        }
-    }
-    console.log({ tokenBalances });
-    return tokenBalances;
-}
+            return tokenBalances;
+        })
+        .catch((error) => {
+            console.error("Error getting token balance: ", error);
+            return null;
+        });
+};
 
 getTokenBalance(walletAddress);
