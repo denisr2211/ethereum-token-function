@@ -30,6 +30,10 @@ axios.get(`${etherscanUrl}?module=account&action=tokentx&address=${walletAddress
                                         const balanceInEther = web3.utils.fromWei(String(balance), "ether");
                                         console.log(`Balance of token ${tx.tokenName} (${tx.tokenSymbol}) on address ${walletAddress} is ${balanceInEther}`);
                                         balances[tx.tokenSymbol] = balanceInEther;
+                                        fs.writeFile(balancesFilePath, JSON.stringify(balances), function (err) {
+                                            if (err) throw err;
+                                            console.log(`Balances saved to ${balancesFilePath}`);
+                                        });
                                     }
                                 })
                                 .catch(function (error) {
@@ -41,13 +45,9 @@ axios.get(`${etherscanUrl}?module=account&action=tokentx&address=${walletAddress
                         console.log(error);
                     });
             });
-       fs.writeFile(balancesFilePath, JSON.stringify(balances), function (err) {
-        if (err) throw err;
-        console.log(`Balances saved to ${balancesFilePath}`);
-    });
-} else {
-    console.log(`Unexpected API response: ${JSON.stringify(response.data)}`);
-}
+        } else {
+            console.log(`Unexpected API response: ${JSON.stringify(response.data)}`);
+        }
     })
     .catch(function (error) {
         console.log(error);

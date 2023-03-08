@@ -10,7 +10,9 @@ const fs = require('fs');
 const util = require('util');
 const readFile = util.promisify(fs.readFile);
 
-const web3 = new Web3(new Web3.providers.HttpProvider('https://goerli.infura.io/v3/64a2626b0570450fb688d9f7c0866316'), {chain: 'mainnet'});
+// const alchemyHttpProvider = `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`;
+const web3 = new Web3(new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/e5efd59428d94ec68ae16ecf26fde607'));
+//const web3 = new Web3(new Web3.providers.HttpProvider('https://goerli.infura.io/v3/64a2626b0570450fb688d9f7c0866316'));
 const walletAddress = '0xA145ac099E3d2e9781C9c848249E2e6b256b030D';
 const API = 'https://api.coingecko.com/api/v3/coins/list?include_platform=true';
 
@@ -57,42 +59,66 @@ function getCoinsList() {
   }
 };
 
-async function getBalanceOfEthereum() {
-  let balance = await web3.eth.getBalance(walletAddress);
-  return { coin: "Ethereum", balance: web3.utils.fromWei(balance, "ether") };
-};
+// async function getBalanceOfEthereum() {
+//   let balance = await web3.eth.getBalance(walletAddress);
+//   return { coin: "Ethereum", balance: web3.utils.fromWei(balance, "ether") };
+// };
 
 async function getTokenBalance(walletAddress) {
-  const coinList = JSON.parse(await getCoinsList());
   const tokenBalances = [];
   const promises = [];
 
-  const ethereumBalance = await getBalanceOfEthereum();
-  tokenBalances.push(ethereumBalance);
+  try {
+    const tokenList = JSON.parse(await getCoinsList());
+    const allTokens = tokenList.filter(token => token.platforms.ethereum && token.platforms.ethereum.toLowerCase() !== "0x0000000000000000000000000000000000000000")
+      .map(token => ({
+        name: token.name,
+        address: token.platforms.ethereum
+      }));
 
-  for (const coin of coinList) {
-    const platforms = coin.platforms;
-    if (platforms && typeof platforms === 'object' && platforms.ethereum) {
-      const tokenContract = new web3.eth.Contract(erc20Abi, platforms.ethereum);
+    const ethereumBalance = await web3.eth.getBalance(walletAddress);
+    const ethereumBalanceInEther = web3.utils.fromWei(ethereumBalance, "ether");
+    tokenBalances.push({
+      name: "ETH",
+      balance: ethereumBalanceInEther,
+    });
+
+    for (const token of allTokens) {
+      const tokenContract = new web3.eth.Contract(erc20Abi, token.address);
       const p = tokenContract.methods.balanceOf(walletAddress).call()
-        .then(balance => {
-          if (balance > 0) {
-            balance = web3.utils.fromWei(balance, "ether");
+        .then(tokenBalanceInWei => {
+          // const tokenBalanceInEther = tokenBalanceInWei !== null ? web3.utils.fromWei(String(tokenBalanceInWei), "ether") : "0";
+          const tokenBalanceInEther = web3.utils.fromWei(String(tokenBalanceInWei, "ether"));
+          if (parseFloat(tokenBalanceInEther) > 0) {
             tokenBalances.push({
-              name: coin.name,
-              balance: balance,
+              name: token.name,
+              balance: tokenBalanceInEther,
             });
           }
         })
         .catch(err => {
-          console.log(`Error getting balance for ${coin.name}: ${err.message}`);
+          console.log(`Error getting balance for token ${token.name}: ${err.message}`);
         });
       promises.push(p);
     }
+
+    await Promise.all(promises);
+    return tokenBalances;
+  } catch (err) {
+    console.error(`Error fetching API: ${err.message}`);
+    throw err;
   }
-  await Promise.all(promises);
-  console.log({tokenBalances});
-  return tokenBalances;
 };
 
-getTokenBalance(walletAddress);
+async function writeTokenBalancesToFile(walletAddress, filename) {
+  const tokenBalances = await getTokenBalance(walletAddress);
+  try {
+    const data = JSON.stringify(tokenBalances);
+    fs.writeFileSync(filename, data);
+    console.log(`Token balances saved to ${filename}`);
+  } catch (err) {
+    console.log(`Error writing token balances to file: ${err.message}`);
+  }
+};
+
+writeTokenBalancesToFile(walletAddress, 'tokenBalances.json');
