@@ -60,11 +60,12 @@ function getCoinsList() {
 async function getBalanceOfEthereum() {
   let balance = await web3.eth.getBalance(walletAddress);
   return { coin: "Ethereum", balance: web3.utils.fromWei(balance, "ether") };
-}
+};
 
 async function getTokenBalance(walletAddress) {
   const coinList = JSON.parse(await getCoinsList());
   const tokenBalances = [];
+  const promises = [];
 
   const ethereumBalance = await getBalanceOfEthereum();
   tokenBalances.push(ethereumBalance);
@@ -73,22 +74,24 @@ async function getTokenBalance(walletAddress) {
     const platforms = coin.platforms;
     if (platforms && typeof platforms === 'object' && platforms.ethereum) {
       const tokenContract = new web3.eth.Contract(erc20Abi, platforms.ethereum);
-      try {
-        let balance = await tokenContract.methods.balanceOf(walletAddress).call();
-        if (balance > 0) {
-          balance = web3.utils.fromWei(balance, "ether");
-          tokenBalances.push({
-            name: coin.name,
-            balance: balance,
-          });
-        }
-      } catch (err) {
-        console.log(`Error getting balance for ${coin.name}: ${err.message}`);
-      }
+      const p = tokenContract.methods.balanceOf(walletAddress).call()
+        .then(balance => {
+          if (balance > 0) {
+            balance = web3.utils.fromWei(balance, "ether");
+            tokenBalances.push({
+              name: coin.name,
+              balance: balance,
+            });
+          }
+        })
+        .catch(err => {
+          console.log(`Error getting balance for ${coin.name}: ${err.message}`);
+        });
+      promises.push(p);
     }
   }
-  console.log({ tokenBalances });
+  await Promise.all(promises);
   return tokenBalances;
-}
+};
 
 getTokenBalance(walletAddress);
