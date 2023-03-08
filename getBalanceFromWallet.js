@@ -91,6 +91,7 @@ async function getTokenBalance(walletAddress) {
     }
   }
   await Promise.all(promises);
+  console.log({tokenBalances});
   return tokenBalances;
 };
 
