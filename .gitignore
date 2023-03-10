@@ -1,4 +1,5 @@
 node_modules
-erc20Coins
+.env
+erc20Tokens.json
 erc20Balances.json
 tokenBalances.json
