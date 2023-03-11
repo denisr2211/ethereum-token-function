@@ -4,20 +4,14 @@ dotenv.config();
 
 const API = process.env.API;
 
-function getTokensListFromApi() {
+async function getTokensListFromApi() {
   try {
-    return axios.get(API)
-      .then(response => {
-        const erc20Tokens = response.data.filter((coin) => coin.platforms && coin.platforms.ethereum);
-        return erc20Tokens;
-      })
-      .catch(error => {
-        console.error(`Error getting token list from API: ${error}`);
-        throw error;
-      });
-  } catch (error) {
-    console.error(`Error getting token list from API: ${error}`);
-    throw error;
+    const response = await axios.get(API);
+    const erc20Tokens = response.data.filter((token) => token.platforms && token.platforms.ethereum);
+    return erc20Tokens;
+  } catch (err) {
+    console.error(`Error getting token list from API: ${err}`);
+    throw err;
   }
 };
 

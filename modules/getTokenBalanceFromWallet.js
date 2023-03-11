@@ -14,7 +14,7 @@ async function getTokenBalanceFromWallet(walletAddress) {
     const promises = [];
 
     try {
-        const tokenList = JSON.parse(await getTokensList());
+        const tokenList = JSON.parse(JSON.stringify(await getTokensList()));
         const allTokens = tokenList.filter(token => token.platforms.ethereum && token.platforms.ethereum.toLowerCase() !== "0x0000000000000000000000000000000000000000")
             .map(token => ({
                 name: token.name,

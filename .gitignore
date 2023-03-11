@@ -1,5 +1,5 @@
 node_modules
+.vscode
 .env
 erc20Tokens.json
-erc20Balances.json
-tokenBalances.json
+erc20TokenBalances.json
