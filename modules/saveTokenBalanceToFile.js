@@ -1,12 +1,11 @@
 const fs = require('fs');
-const getTokenBalanceFromWallet = require('./getTokenBalanceFromWallet');
 
-async function saveTokenBalancesToFile(walletAddress, filename) {
-    const tokenBalances = await getTokenBalanceFromWallet(walletAddress);
+async function saveTokenBalancesToFile(tokenBalances, filename) {
     try {
         const data = JSON.stringify(tokenBalances);
         fs.writeFileSync(filename, data);
         console.log(`Token balances saved to ${filename}`);
+        return tokenBalances;
     } catch (err) {
         console.log(`Error writing token balances to file: ${err.message}`);
     }

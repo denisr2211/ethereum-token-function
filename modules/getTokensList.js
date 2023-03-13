@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { saveTokensToFile } = require('./saveTokensToFile');
-const api = require('./getTokensListFromApi');
+const api = require('../servicesAPI/getTokensListFromApi');
 
 async function getTokensList() {
     const filePath = "../../task-Kot-1/localDatabase/erc20Tokens.json";

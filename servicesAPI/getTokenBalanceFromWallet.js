@@ -1,6 +1,7 @@
 const Web3 = require('web3');
 const erc20Abi = require('human-standard-token-abi');
-const { getTokensList } = require('./getTokensList');
+const { getTokensList } = require('../modules/getTokensList');
+const { getTokensListFromDB } = require('../mongoDB/getTokensListFromDB');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -14,7 +15,7 @@ async function getTokenBalanceFromWallet(walletAddress) {
     const promises = [];
 
     try {
-        const tokenList = JSON.parse(JSON.stringify(await getTokensList()));
+        const tokenList = JSON.parse(JSON.stringify(await getTokensListFromDB()));
         const allTokens = tokenList.filter(token => token.platforms.ethereum && token.platforms.ethereum.toLowerCase() !== "0x0000000000000000000000000000000000000000")
             .map(token => ({
                 name: token.name,
