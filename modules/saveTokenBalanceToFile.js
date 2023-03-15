@@ -5,7 +5,6 @@ async function saveTokenBalancesToFile(tokenBalances, filename) {
         const data = JSON.stringify(tokenBalances);
         fs.writeFileSync(filename, data);
         console.log(`Token balances saved to ${filename}`);
-        return tokenBalances;
     } catch (err) {
         console.log(`Error writing token balances to file: ${err.message}`);
     }

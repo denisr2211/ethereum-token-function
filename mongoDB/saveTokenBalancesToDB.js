@@ -6,15 +6,15 @@ async function saveTokenBalancesToDB(tokenBalances = []) {
       console.log("Unable to save token balances to database: invalid input");
       return null;
     }
-    const promises = tokenBalances.map(tokenBalance => {
+    tokenBalances.map(tokenBalance => {
       const name = tokenBalance.name;
       const balance = tokenBalance.balance;
-      return TokenBalance.create({ name, balance });
+      TokenBalance.create({ name, balance });
     });
 
-    const results = await Promise.all(promises);
+    //const results = await Promise.all(promises);
   
-    return results;
+    //return results;
   } catch (err) {
     console.log("Unable to save token balances to Mongo DB:", err);
     return null;

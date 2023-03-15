@@ -17,23 +17,31 @@ mongoose.connect(url, {
     useUnifiedTopology: true,
 });
 
-async function updateTokenBalances() {
+async function getBalances() {
     try {
-        const tokenBalancesFromWallet = await getTokenBalanceFromWallet(walletAddress);
-        const tokenBalances = await saveTokenBalancesToFile(tokenBalancesFromWallet, '../task-Kot-1/localDatabase/erc20TokenBalances.json');
-        const newTokenBalances = await saveTokenBalancesToDB(tokenBalances);
-        console.log(`Saved ${newTokenBalances.length} token balances to Mongo DB.`);
+        const tokenList = JSON.parse(JSON.stringify(await getTokensList()));
+        const tokenBalancesFromWallet = await getTokenBalanceFromWallet(walletAddress)
+        .then((tokenBalancesFromWallet)=>{
+            saveTokenBalancesToFile(tokenBalancesFromWallet, '../task-Kot-1/localDatabase/erc20TokenBalances.json');
+        });
+        
+        // const newTokenBalances = await saveTokenBalancesToDB(tokenBalances);
+        // console.log(`Saved ${newTokenBalances.length} token balances to Mongo DB.`);
     } catch (err) {
-        console.error(`Error saving token balances to Mongo DB: ${err}`);
+        console.error(`Error saving token balances to file`);
+        // console.error(`Error saving token balances to Mongo DB: ${err}`);       
     }
 };
 
 app.get('/token-balances', async (req, res) => {
     try {
-        await updateTokenBalances();
+        // await updateTokenBalances();
+        const newTokenBalances = await getBalances();
+        // res.render('token-balances', { tokenBalances: newTokenBalances });
         res.status(200).json(newTokenBalances);
     } catch (err) {
-        res.status(500).send('Error saving token balances to Mongo DB');
+        res.status(500).send('Error saving token balances to file');
+        // res.status(500).send('Error saving token balances to Mongo DB');
     }
 });
 

@@ -6,7 +6,7 @@ async function getTokensList() {
     const filePath = "../../task-Kot-1/localDatabase/erc20Tokens.json";
     if (fs.existsSync(filePath)) {
         try {
-            const updatedTokensList = await fs.promises.readFile(filePath, "utf8");
+            const updatedTokensList = JSON.parse(await fs.promises.readFile(filePath, "utf8"));
             console.log("Successfully read from the storage of tokens.");
             return updatedTokensList;
         } catch (err) {

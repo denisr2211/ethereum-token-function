@@ -10,12 +10,13 @@ const INFURA_API_KEY = process.env.INFURA_API_KEY
 
 const web3 = new Web3(new Web3.providers.HttpProvider(`${INFURA_URL}${INFURA_API_KEY}`));
 
-async function getTokenBalanceFromWallet(walletAddress) {
+async function getTokenBalanceFromWallet(walletAddress, tokenList) {
     const tokenBalances = [];
     const promises = [];
 
     try {
-        const tokenList = JSON.parse(JSON.stringify(await getTokensListFromDB()));
+        
+        // const tokenList = JSON.parse(JSON.stringify(await getTokensListFromDB()));
         const allTokens = tokenList.filter(token => token.platforms.ethereum && token.platforms.ethereum.toLowerCase() !== "0x0000000000000000000000000000000000000000")
             .map(token => ({
                 name: token.name,
